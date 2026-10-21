@@ -1,0 +1,128 @@
+# =============================================================================
+#  Archivage — Docker Compose (DEV)
+#  Stack : PHP 8.4-fpm-alpine + nginx + PostgreSQL 16 + Redis 7 + MinIO + Worker
+# =============================================================================
+name: archivage
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: archivage_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # Activation des extensions clés au démarrage (si la base est déjà créée sans elles)
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - archivage_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks: [archivage_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: archivage_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
+    networks: [archivage_net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Optionnel (stockage S3, Phase 8) : `docker compose --profile s3 up -d`.
+  # MinIO ne publie plus d'image communautaire sur Docker Hub : renseigner
+  # MINIO_IMAGE avec l'image de votre registre (ou une alternative compatible S3).
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio:latest}
+    profiles: [s3]
+    container_name: archivage_minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - archivage_miniodata:/data
+    networks: [archivage_net]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    image: archivage/app:php8.4
+    container_name: archivage_app
+    restart: unless-stopped
+    working_dir: /var/www/backend
+    env_file: .env
+    environment:
+      # Permet au conteneur PHP de joindre nginx, postgres, redis, minio
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      AWS_ENDPOINT: http://minio:9000
+      AWS_URL: http://localhost:9000
+    volumes:
+      - ./backend:/var/www/backend
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [archivage_net]
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    container_name: archivage_nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # nginx vérifie l'existence de index.php (try_files) avant de passer à PHP-FPM
+      - ./backend/public:/var/www/backend/public:ro
+    depends_on:
+      - app
+    networks: [archivage_net]
+
+  worker:
+    image: archivage/app:php8.4
+    container_name: archivage_worker
+    restart: unless-stopped
+    working_dir: /var/www/backend
+    env_file: .env
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
+    command: ["php", "artisan", "queue:work", "--tries=3", "--max-time=3600", "--sleep=3"]
+    volumes:
+      - ./backend:/var/www/backend
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [archivage_net]
+
+volumes:
+  archivage_pgdata:
+  archivage_miniodata:
+
+networks:
+  archivage_net:
+    driver: bridge

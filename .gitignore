@@ -1,0 +1,52 @@
+# ── PHP / Laravel 13 / PHP 8.4 ─────────────────────────────────────────────
+/backend/vendor/
+/backend/node_modules/
+/backend/.phpunit.result.cache
+/backend/.phpunit.cache/
+/backend/storage/framework/cache/data/*
+/backend/storage/framework/sessions/*
+/backend/storage/framework/views/*
+/backend/storage/logs/*.log
+!/backend/storage/.gitkeep
+!/backend/storage/framework/cache/.gitkeep
+!/backend/storage/framework/sessions/.gitkeep
+!/backend/storage/framework/views/.gitkeep
+!/backend/storage/logs/.gitkeep
+!/backend/storage/app/archives/.gitkeep
+!/backend/bootstrap/cache/.gitkeep
+
+# ── Next.js 16 / Node 20 ───────────────────────────────────────────────────
+/frontend/node_modules/
+/frontend/.next/
+/frontend/out/
+/frontend/build/
+/frontend/.turbo/
+/frontend/.tsbuildinfo
+/frontend/coverage/
+!/frontend/.gitkeep
+!/frontend/public/.gitkeep
+
+# ── Éditeurs ───────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ── Env ─────────────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+!.env.example
+!**/.env.example
+
+# ── Stockage des archives (jamais versionné) ────────────────────────────────
+/backend/storage/app/archives/*
+!/backend/storage/app/archives/.gitkeep
+
+# ── Uploads temporaires / divers ────────────────────────────────────────────
+*.zip
+*.tar.gz
+*.bak
+*.orig
+*.rej
