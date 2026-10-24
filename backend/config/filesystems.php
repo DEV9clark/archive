@@ -45,7 +45,7 @@ return [
         'root'      => 'archives',
         'max_mb'    => (int) env('ARCHIVE_MAX_UPLOAD_MB', 200),
         'mimes'     => array_filter(array_map('trim', explode(',', env('ARCHIVE_ALLOWED_MIMES',
-            'application/pdf,image/jpeg,image/png,image/webp,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv'
+            'application/pdf,image/jpeg,image/png,image/webp,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv'
         )))),
     ],
 ];

@@ -76,7 +76,11 @@ Archivage/
 ## Modèle de données
 
 ```
-territoires (continent → nation → district) → departements → assemblees → dossiers (sous-dossiers libres) → documents
+territoires (continent → nation → district)
+ ├─ departements  (bureaux : Secrétariat, Finances… — à chaque niveau) → dossiers → documents
+ └─ assemblees    (districts uniquement)                              → dossiers → documents
+
+dossiers : rattachés à un département OU une assemblée ; sous-dossiers facultatifs, profondeur libre
 ```
 
 Chaque niveau porte un `chemin` **`ltree`** matériel (`afrique_1a2b3c4d.senegal_5e6f7a8b.dakar_…` : slug sans accents + 8 hex de l'UUID), calculé **uniquement par trigger PostgreSQL** (`trg_hierarchie_set_chemin`). Un renommage ou un déplacement réécrit le préfixe de tous les descendants, toutes tables confondues, ainsi que les périmètres utilisateurs concernés (`trg_hierarchie_cascade`). Un déplacement sous son propre descendant est refusé. Effets :

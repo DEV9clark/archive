@@ -20,16 +20,16 @@ class ArborescenceController extends Controller
 {
     /** niveau => [relation enfant => niveau enfant] */
     private const ENFANTS = [
-        'territoire'  => ['enfants' => 'territoire', 'departements' => 'departement'],
-        'departement' => ['assemblees' => 'assemblee'],
+        'territoire'  => ['enfants' => 'territoire', 'departements' => 'departement', 'assemblees' => 'assemblee'],
+        'departement' => ['dossiers' => 'dossier'],
         'assemblee'   => ['dossiers' => 'dossier'],
         'dossier'     => ['enfants' => 'dossier'],
     ];
 
     /** relations à compter pour savoir si un nœud est dépliable */
     private const COMPTES = [
-        'territoire'  => ['enfants', 'departements'],
-        'departement' => ['assemblees'],
+        'territoire'  => ['enfants', 'departements', 'assemblees'],
+        'departement' => ['dossiers'],
         'assemblee'   => ['dossiers'],
         'dossier'     => ['enfants', 'documents'],
     ];

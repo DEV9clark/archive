@@ -12,7 +12,7 @@ class DepartementController extends NoeudController
 {
     protected string $modele = Departement::class;
 
-    protected array $enfants = ['assemblees'];
+    protected array $enfants = ['dossiers'];
 
     protected array $filtres = ['territoire_id'];
 

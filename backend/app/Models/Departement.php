@@ -13,6 +13,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 use OwenIt\Auditing\Contracts\Auditable;
 
+/**
+ * Département = division d'un bureau (Secrétariat, Finances…), présent à
+ * chaque niveau de territoire (continent, nation, district).
+ */
 class Departement extends Model implements Auditable
 {
     use HasFactory, HasUuids, SoftDeletes, AuditableTrait, HasCheminHierarchique, BelongsToPerimetre;
@@ -33,8 +37,8 @@ class Departement extends Model implements Auditable
         return $this->belongsTo(Territoire::class);
     }
 
-    public function assemblees(): HasMany
+    public function dossiers(): HasMany
     {
-        return $this->hasMany(Assemblee::class);
+        return $this->hasMany(Dossier::class);
     }
 }

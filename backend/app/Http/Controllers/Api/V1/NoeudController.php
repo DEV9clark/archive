@@ -154,8 +154,8 @@ abstract class NoeudController extends Controller
         $noeud = $this->modele::onlyTrashed()->findOrFail($id);
         $this->authorize('restore', $noeud);
 
-        $parent = $this->parentDe($noeud->only($this->modele::colonnesParent()));
-        if ($parent === null && $noeud->getAttribute($this->modele::colonnesParent()[0]) !== null) {
+        $colonnes = $noeud->only($this->modele::colonnesParent());
+        if ($this->parentDe($colonnes) === null && array_filter($colonnes) !== []) {
             return response()->json(['message' => 'Restaurez d\'abord l\'élément parent.'], 409);
         }
 

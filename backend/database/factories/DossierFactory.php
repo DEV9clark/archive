@@ -21,6 +21,10 @@ class DossierFactory extends Factory
 
     public function sous(Dossier $parent): static
     {
-        return $this->state(['assemblee_id' => $parent->assemblee_id, 'parent_dossier_id' => $parent->id]);
+        return $this->state([
+            'departement_id'    => $parent->departement_id,
+            'assemblee_id'      => $parent->assemblee_id,
+            'parent_dossier_id' => $parent->id,
+        ]);
     }
 }

@@ -119,6 +119,28 @@ services:
       redis: { condition: service_healthy }
     networks: [archivage_net]
 
+  # Accès distant au frontend (qui relaie /api vers nginx, cf. next.config.ts).
+  # Démarrage : docker compose --profile remote up -d ngrok
+  # URL publique : docker compose logs ngrok | grep url=
+  # Sans NGROK_URL, ngrok prend le domaine gratuit du compte : il ne peut être
+  # en ligne que sur un seul projet à la fois.
+  ngrok:
+    image: ngrok/ngrok:3-alpine
+    container_name: archivage_ngrok
+    profiles: ["remote"]
+    restart: unless-stopped
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+      NGROK_URL: ${NGROK_URL:-}
+    # Le frontend tourne sur la machine hôte (npm run dev, port 3010)
+    entrypoint: ["/bin/sh", "-c"]
+    command: ['exec ngrok http "host.docker.internal:$${FRONT_PORT:-3010}" --log stdout $${NGROK_URL:+--url "$$NGROK_URL"}']
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "4041:4040"   # inspecteur de requêtes : http://localhost:4041 (4040 = gestion-fonds)
+    networks: [archivage_net]
+
 volumes:
   archivage_pgdata:
   archivage_miniodata:

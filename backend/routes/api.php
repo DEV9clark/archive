@@ -21,7 +21,7 @@ Route::prefix('v1')->group(function () {
         Route::get('auth/me', [V1\AuthController::class, 'me']);
         Route::post('auth/logout', [V1\AuthController::class, 'logout']);
 
-        // Hiérarchie : territoire → département → assemblée → dossier
+        // Hiérarchie : territoire → (département | assemblée de district) → dossier
         foreach ([
             'territoires'  => V1\TerritoireController::class,
             'departements' => V1\DepartementController::class,

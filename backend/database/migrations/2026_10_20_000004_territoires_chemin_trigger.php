@@ -39,6 +39,8 @@ return new class extends Migration {
         CREATE OR REPLACE FUNCTION trg_hierarchie_set_chemin() RETURNS trigger AS $fn$
         DECLARE
             parent_chemin ltree;
+            parent_type text;
+            parent_departement uuid;
             parent_assemblee uuid;
         BEGIN
             IF NEW.id IS NULL THEN
@@ -59,24 +61,34 @@ return new class extends Migration {
                         RAISE EXCEPTION 'Territoire introuvable : %', NEW.territoire_id;
                     END IF;
                 WHEN 'assemblees' THEN
-                    SELECT chemin INTO parent_chemin FROM departements WHERE id = NEW.departement_id;
+                    SELECT chemin, type INTO parent_chemin, parent_type FROM territoires WHERE id = NEW.territoire_id;
                     IF NOT FOUND THEN
-                        RAISE EXCEPTION 'Département introuvable : %', NEW.departement_id;
+                        RAISE EXCEPTION 'Territoire introuvable : %', NEW.territoire_id;
+                    END IF;
+                    IF parent_type <> 'district' THEN
+                        RAISE EXCEPTION 'Une assemblée doit être rattachée à un district';
                     END IF;
                 WHEN 'dossiers' THEN
                     IF NEW.parent_dossier_id IS NOT NULL THEN
-                        SELECT chemin, assemblee_id INTO parent_chemin, parent_assemblee
+                        SELECT chemin, departement_id, assemblee_id
+                          INTO parent_chemin, parent_departement, parent_assemblee
                           FROM dossiers WHERE id = NEW.parent_dossier_id;
                         IF NOT FOUND THEN
                             RAISE EXCEPTION 'Dossier parent introuvable : %', NEW.parent_dossier_id;
                         END IF;
-                        IF parent_assemblee <> NEW.assemblee_id THEN
-                            RAISE EXCEPTION 'Le dossier parent appartient à une autre assemblée';
+                        IF parent_departement IS DISTINCT FROM NEW.departement_id
+                           OR parent_assemblee IS DISTINCT FROM NEW.assemblee_id THEN
+                            RAISE EXCEPTION 'Le dossier parent appartient à un autre département ou une autre assemblée';
                         END IF;
-                    ELSE
+                    ELSIF NEW.assemblee_id IS NOT NULL THEN
                         SELECT chemin INTO parent_chemin FROM assemblees WHERE id = NEW.assemblee_id;
                         IF NOT FOUND THEN
                             RAISE EXCEPTION 'Assemblée introuvable : %', NEW.assemblee_id;
+                        END IF;
+                    ELSE
+                        SELECT chemin INTO parent_chemin FROM departements WHERE id = NEW.departement_id;
+                        IF NOT FOUND THEN
+                            RAISE EXCEPTION 'Département introuvable : %', NEW.departement_id;
                         END IF;
                     END IF;
             END CASE;

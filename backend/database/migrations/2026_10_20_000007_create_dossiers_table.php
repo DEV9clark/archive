@@ -5,6 +5,11 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * Dossier : rangé soit dans un département (bureau d'un continent, d'une
+ * nation ou d'un district), soit dans une assemblée — jamais les deux.
+ * Sous-dossiers à profondeur libre via `parent_dossier_id`.
+ */
 return new class extends Migration {
     public function up(): void
     {
@@ -14,17 +19,23 @@ return new class extends Migration {
             $t->string('nom', 255);
             $t->string('reference', 64)->nullable();
             $t->string('description', 1000)->nullable();
-            $t->uuid('assemblee_id');
+            $t->uuid('departement_id')->nullable();
+            $t->uuid('assemblee_id')->nullable();
             $t->uuid('parent_dossier_id')->nullable();
             $t->string('chemin')->nullable(); // ltree, calculé par trigger (000008)
             $t->timestampsTz();
             $t->softDeletesTz();
 
+            $t->foreign('departement_id')->references('id')->on('departements')->restrictOnDelete();
             $t->foreign('assemblee_id')->references('id')->on('assemblees')->restrictOnDelete();
             $t->foreign('parent_dossier_id')->references('id')->on('dossiers')->restrictOnDelete();
-            $t->unique(['assemblee_id', 'parent_dossier_id', 'nom'], 'dossiers_unique')->nullsNotDistinct();
+            $t->unique(['departement_id', 'assemblee_id', 'parent_dossier_id', 'nom'], 'dossiers_unique')->nullsNotDistinct();
             $t->index('reference');
         });
+
+        DB::statement('ALTER TABLE dossiers
+            ADD CONSTRAINT dossiers_rattachement_check
+            CHECK (num_nonnulls(departement_id, assemblee_id) = 1)');
 
         DB::statement('ALTER TABLE dossiers ALTER COLUMN chemin TYPE ltree USING chemin::ltree');
         DB::statement('ALTER TABLE dossiers ALTER COLUMN chemin SET NOT NULL');

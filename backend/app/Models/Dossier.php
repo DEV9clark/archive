@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 use OwenIt\Auditing\Contracts\Auditable;
 
+/** Rangé dans un département OU une assemblée (exactement un des deux). */
 class Dossier extends Model implements Auditable
 {
     use HasFactory, HasUuids, SoftDeletes, AuditableTrait, HasCheminHierarchique, BelongsToPerimetre;
@@ -21,12 +22,17 @@ class Dossier extends Model implements Auditable
 
     protected $fillable = [
         'nom', 'reference', 'description',
-        'assemblee_id', 'parent_dossier_id',
+        'departement_id', 'assemblee_id', 'parent_dossier_id',
     ];
 
     public static function colonnesParent(): array
     {
-        return ['assemblee_id', 'parent_dossier_id'];
+        return ['departement_id', 'assemblee_id', 'parent_dossier_id'];
+    }
+
+    public function departement(): BelongsTo
+    {
+        return $this->belongsTo(Departement::class);
     }
 
     public function assemblee(): BelongsTo

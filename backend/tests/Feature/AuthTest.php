@@ -10,7 +10,7 @@ it('connecte un utilisateur et renvoie son profil et ses droits', function () {
     $reponse = $this->postJson('/api/v1/auth/login', ['email' => 'LECTEUR@test.local', 'password' => 'password'])
         ->assertOk()
         ->assertJsonPath('utilisateur.roles.0', 'lecteur')
-        ->assertJsonPath('utilisateur.perimetres_detail.0.fil_ariane.4.nom', 'Almadies');
+        ->assertJsonPath('utilisateur.perimetres_detail.0.fil_ariane.3.nom', 'Almadies');
 
     expect($reponse->json('utilisateur.permissions'))->toContain('documents.voir')->not->toContain('documents.deposer');
 

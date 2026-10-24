@@ -30,10 +30,11 @@ function ciblesCreation(noeud: Noeud | null): (CibleCreation & { libelle: string
       return [
         ...(sous ? [{ niveau: "territoire" as const, type: sous, parent: { parent_id: noeud.id }, libelle: sous === "nation" ? "Nation" : "District" }] : []),
         { niveau: "departement", parent: { territoire_id: noeud.id }, libelle: "Département" },
+        ...(noeud.type === "district" ? [{ niveau: "assemblee" as const, parent: { territoire_id: noeud.id }, libelle: "Assemblée" }] : []),
       ];
     }
     case "departement":
-      return [{ niveau: "assemblee", parent: { departement_id: noeud.id }, libelle: "Assemblée" }];
+      return [{ niveau: "dossier", parent: { departement_id: noeud.id }, libelle: "Dossier" }];
     case "assemblee":
       return [{ niveau: "dossier", parent: { assemblee_id: noeud.id }, libelle: "Dossier" }];
     default:
@@ -71,7 +72,7 @@ export function PanneauNoeud({ niveau, id }: { niveau?: Niveau; id?: string }) {
 
   // Écriture : le serveur tranche (droits.modifier) ; sans nœud, seul l'admin global crée un continent
   const peutCreer = noeud
-    ? !!noeud.droits?.modifier && (noeud.niveau === "assemblee" || noeud.niveau === "dossier" ? peutGererDossiers : peutGererHierarchie)
+    ? !!noeud.droits?.modifier && (noeud.niveau === "territoire" ? peutGererHierarchie : peutGererDossiers)
     : !!adminGlobal;
 
   return (

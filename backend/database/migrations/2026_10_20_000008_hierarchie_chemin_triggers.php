@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration {
     private const TABLES = [
         'departements' => 'territoire_id',
-        'assemblees'   => 'departement_id',
-        'dossiers'     => 'assemblee_id, parent_dossier_id',
+        'assemblees'   => 'territoire_id',
+        'dossiers'     => 'departement_id, assemblee_id, parent_dossier_id',
     ];
 
     public function up(): void

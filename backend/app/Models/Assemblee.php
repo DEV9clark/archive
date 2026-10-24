@@ -20,17 +20,18 @@ class Assemblee extends Model implements Auditable
     protected $table = 'assemblees';
 
     protected $fillable = [
-        'nom', 'code', 'departement_id', 'description',
+        'nom', 'code', 'territoire_id', 'description',
     ];
 
     public static function colonnesParent(): array
     {
-        return ['departement_id'];
+        return ['territoire_id'];
     }
 
-    public function departement(): BelongsTo
+    /** District auquel l'assemblée est rattachée. */
+    public function territoire(): BelongsTo
     {
-        return $this->belongsTo(Departement::class);
+        return $this->belongsTo(Territoire::class);
     }
 
     public function dossiers(): HasMany

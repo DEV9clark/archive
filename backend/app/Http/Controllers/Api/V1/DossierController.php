@@ -3,14 +3,16 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Models\Assemblee;
+use App\Models\Departement;
 use App\Models\Dossier;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
- * Un dossier est rangé dans une assemblée, éventuellement sous un dossier
- * parent de la même assemblée (sous-dossiers à profondeur libre).
+ * Un dossier est rangé dans un département OU une assemblée, éventuellement
+ * sous un dossier parent du même conteneur (sous-dossiers à profondeur libre).
  */
 class DossierController extends NoeudController
 {
@@ -18,15 +20,20 @@ class DossierController extends NoeudController
 
     protected array $enfants = ['enfants', 'documents'];
 
-    protected array $filtres = ['assemblee_id', 'parent_dossier_id'];
+    protected array $filtres = ['departement_id', 'assemblee_id', 'parent_dossier_id'];
 
     protected function regles(Request $request, ?Model $noeud): array
     {
-        // Sous-dossier : l'assemblée est déduite du parent
-        if ($request->filled('parent_dossier_id') && ! $request->filled('assemblee_id')) {
-            $request->merge([
-                'assemblee_id' => Dossier::whereKey($request->input('parent_dossier_id'))->value('assemblee_id'),
-            ]);
+        if ($request->filled('parent_dossier_id')) {
+            // Sous-dossier : le conteneur est hérité du parent
+            $parent = Dossier::find($request->input('parent_dossier_id'));
+            if ($parent) {
+                $request->merge($parent->only(['departement_id', 'assemblee_id']));
+            }
+        } elseif ($request->filled('departement_id') && ! $request->filled('assemblee_id')) {
+            $request->merge(['assemblee_id' => null]);
+        } elseif ($request->filled('assemblee_id') && ! $request->filled('departement_id')) {
+            $request->merge(['departement_id' => null]);
         }
 
         $requis = $noeud ? 'sometimes' : 'required';
@@ -35,7 +42,14 @@ class DossierController extends NoeudController
             'nom'               => [$requis, 'string', 'max:255'],
             'reference'         => ['nullable', 'string', 'max:64'],
             'description'       => ['nullable', 'string', 'max:1000'],
-            'assemblee_id'      => [$requis, 'uuid', Rule::exists('assemblees', 'id')->whereNull('deleted_at')],
+            'departement_id'    => [
+                $noeud ? 'nullable' : 'required_without:assemblee_id', 'nullable', 'uuid', 'prohibits:assemblee_id',
+                Rule::exists('departements', 'id')->whereNull('deleted_at'),
+            ],
+            'assemblee_id'      => [
+                'nullable', 'uuid',
+                Rule::exists('assemblees', 'id')->whereNull('deleted_at'),
+            ],
             'parent_dossier_id' => [
                 'nullable', 'uuid',
                 Rule::exists('dossiers', 'id')->whereNull('deleted_at'),
@@ -46,8 +60,21 @@ class DossierController extends NoeudController
 
     protected function parentDe(array $donnees): ?Model
     {
-        return ! empty($donnees['parent_dossier_id'])
-            ? Dossier::find($donnees['parent_dossier_id'])
-            : Assemblee::find($donnees['assemblee_id'] ?? null);
+        return match (true) {
+            ! empty($donnees['parent_dossier_id']) => Dossier::find($donnees['parent_dossier_id']),
+            ! empty($donnees['assemblee_id'])      => Assemblee::find($donnees['assemblee_id']),
+            default                                => Departement::find($donnees['departement_id'] ?? null),
+        };
+    }
+
+    protected function verifier(array $donnees, ?Model $parent, ?Model $noeud): void
+    {
+        $rattachement = $donnees + ($noeud?->only(['departement_id', 'assemblee_id']) ?? []);
+
+        if (empty($rattachement['departement_id']) === empty($rattachement['assemblee_id'])) {
+            throw ValidationException::withMessages([
+                'departement_id' => 'Un dossier doit être rangé soit dans un département, soit dans une assemblée.',
+            ]);
+        }
     }
 }

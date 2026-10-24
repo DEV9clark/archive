@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Assemblee;
 use App\Models\Departement;
 use App\Models\Dossier;
 use App\Models\Territoire;
@@ -13,7 +14,7 @@ it('calcule des chemins ltree sans accents, de la racine au dossier', function (
     expect($a['senegal']->chemin)->toMatch('/^afrique_[0-9a-f]{8}\.senegal_[0-9a-f]{8}$/')
         ->and($a['senegal']->profondeur)->toBe(2)
         ->and($a['pv']->chemin)->toStartWith($a['almadies']->chemin.'.')
-        ->and($a['pv']->getFilArianeSlugs())->toBe(['afrique', 'senegal', 'dakar', 'administration', 'almadies', 'proces_verbaux']);
+        ->and($a['pv']->getFilArianeSlugs())->toBe(['afrique', 'senegal', 'dakar', 'almadies', 'proces_verbaux']);
 });
 
 it('propage un renommage à tous les descendants, toutes tables confondues', function () {
@@ -33,10 +34,10 @@ it('déplace un sous-arbre et fait suivre les périmètres', function () {
     $surAssemblee = utilisateur('archiviste', $a['almadies']);
     $surDossier = utilisateur('lecteur', $a['pv']);
 
-    $a['almadies']->update(['departement_id' => $a['depThies']->id]);
+    $a['almadies']->update(['territoire_id' => $a['thies']->id]);
 
     $chemin = fn ($u) => UtilisateurPerimetre::where('utilisateur_id', $u->id)->value('chemin');
-    expect(Dossier::find($a['pv']->id)->chemin)->toStartWith($a['depThies']->chemin.'.')
+    expect(Dossier::find($a['pv']->id)->chemin)->toStartWith($a['thies']->chemin.'.')
         ->and($chemin($surAssemblee))->toBe($a['almadies']->chemin)
         ->and($chemin($surDossier))->toBe(Dossier::find($a['pv']->id)->chemin);
 });
@@ -50,9 +51,52 @@ it('reconstruit le fil d\'Ariane en une requête', function () {
     $a = arbre();
     $fil = app(HierarchieService::class)->filAriane($a['pv']->chemin);
 
-    expect(array_column($fil, 'nom'))->toBe(['Afrique', 'Sénégal', 'Dakar', 'Administration', 'Almadies', 'Procès-verbaux'])
-        ->and(array_column($fil, 'niveau'))->toBe(['territoire', 'territoire', 'territoire', 'departement', 'assemblee', 'dossier']);
+    expect(array_column($fil, 'nom'))->toBe(['Afrique', 'Sénégal', 'Dakar', 'Almadies', 'Procès-verbaux'])
+        ->and(array_column($fil, 'niveau'))->toBe(['territoire', 'territoire', 'territoire', 'assemblee', 'dossier']);
 });
+
+it('range dossiers et sous-dossiers dans le département d\'un continent ou d\'une nation', function () {
+    $a = arbre();
+    $admin = utilisateur('admin');
+    $secretariat = Departement::create(['nom' => 'Secrétariat', 'territoire_id' => $a['afrique']->id]);
+
+    $dossier = $this->actingAs($admin)->postJson('/api/v1/dossiers', [
+        'nom' => 'Rapports', 'departement_id' => $secretariat->id,
+    ])->assertCreated()->assertJsonPath('assemblee_id', null)->json();
+
+    $this->actingAs($admin)->postJson('/api/v1/dossiers', [
+        'nom' => '2026', 'parent_dossier_id' => $dossier['id'],
+    ])->assertCreated()->assertJsonPath('departement_id', $secretariat->id);
+
+    $fil = app(HierarchieService::class)->filAriane(Dossier::where('nom', '2026')->value('chemin'));
+    expect(array_column($fil, 'niveau'))->toBe(['territoire', 'departement', 'dossier', 'dossier']);
+
+    $enfants = $this->actingAs($admin)->getJson("/api/v1/arborescence?niveau=departement&id={$secretariat->id}")->json('data');
+    expect(array_column($enfants, 'nom'))->toBe(['Rapports']);
+});
+
+it('exige un seul conteneur pour un dossier', function () {
+    $a = arbre();
+    $admin = utilisateur('admin');
+
+    $this->actingAs($admin)->postJson('/api/v1/dossiers', ['nom' => 'X'])
+        ->assertUnprocessable()->assertJsonValidationErrors('departement_id');
+    $this->actingAs($admin)->postJson('/api/v1/dossiers', [
+        'nom' => 'X', 'departement_id' => $a['depDakar']->id, 'assemblee_id' => $a['almadies']->id,
+    ])->assertUnprocessable()->assertJsonValidationErrors('departement_id');
+});
+
+it('n\'accepte d\'assemblée que dans un district', function () {
+    $a = arbre();
+    $admin = utilisateur('admin');
+
+    $this->actingAs($admin)->postJson('/api/v1/assemblees', ['nom' => 'AG', 'territoire_id' => $a['senegal']->id])
+        ->assertUnprocessable()->assertJsonValidationErrors('territoire_id');
+    $this->actingAs($admin)->postJson('/api/v1/assemblees', ['nom' => 'AG', 'territoire_id' => $a['dakar']->id])
+        ->assertCreated();
+
+    Assemblee::create(['nom' => 'Hors district', 'territoire_id' => $a['afrique']->id]);
+})->throws(QueryException::class, 'district');
 
 it('impose continent → nation → district via l\'API', function () {
     $a = arbre();

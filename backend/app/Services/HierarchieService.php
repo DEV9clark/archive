@@ -25,7 +25,10 @@ use Illuminate\Support\Facades\DB;
  */
 class HierarchieService
 {
-    /** niveau API => classe de modèle, du plus haut au plus bas */
+    /**
+     * niveau API => classe de modèle. Un territoire contient départements et
+     * (s'il est district) assemblées ; un dossier vit dans l'un ou l'autre.
+     */
     public const NIVEAUX = [
         'territoire'  => Territoire::class,
         'departement' => Departement::class,

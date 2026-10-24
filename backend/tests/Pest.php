@@ -14,8 +14,10 @@ pest()->extend(TestCase::class)
 
 /**
  * Petite hiérarchie commune :
- *   Afrique → Sénégal → Dakar → Administration → Almadies → Procès-verbaux
- *                     → Thiès → Administration → Centre   → Courrier
+ *   Afrique → Sénégal → Dakar → Administration (département)
+ *                             → Almadies (assemblée) → Procès-verbaux
+ *                     → Thiès → Administration (département)
+ *                             → Centre (assemblée)   → Courrier
  *
  * @return array<string, \Illuminate\Database\Eloquent\Model>
  */
@@ -28,8 +30,8 @@ function arbre(): array
 
     $depDakar = Departement::create(['nom' => 'Administration', 'territoire_id' => $dakar->id]);
     $depThies = Departement::create(['nom' => 'Administration', 'territoire_id' => $thies->id]);
-    $almadies = Assemblee::create(['nom' => 'Almadies', 'departement_id' => $depDakar->id]);
-    $centre = Assemblee::create(['nom' => 'Centre', 'departement_id' => $depThies->id]);
+    $almadies = Assemblee::create(['nom' => 'Almadies', 'territoire_id' => $dakar->id]);
+    $centre = Assemblee::create(['nom' => 'Centre', 'territoire_id' => $thies->id]);
     $pv = Dossier::create(['nom' => 'Procès-verbaux', 'assemblee_id' => $almadies->id]);
     $courrier = Dossier::create(['nom' => 'Courrier', 'assemblee_id' => $centre->id]);
 

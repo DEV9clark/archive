@@ -49,6 +49,12 @@ class Territoire extends Model implements Auditable
         return $this->hasMany(Departement::class);
     }
 
+    /** Assemblées (districts uniquement). */
+    public function assemblees(): HasMany
+    {
+        return $this->hasMany(Assemblee::class);
+    }
+
     /** Type attendu pour un enfant direct (continent → nation → district). */
     public function typeEnfant(): ?string
     {

@@ -12,7 +12,7 @@ class TerritoireController extends NoeudController
 {
     protected string $modele = Territoire::class;
 
-    protected array $enfants = ['enfants', 'departements'];
+    protected array $enfants = ['enfants', 'departements', 'assemblees'];
 
     protected array $filtres = ['parent_id', 'type'];
 

@@ -25,6 +25,8 @@
         <env name="CACHE_STORE" value="array" force="true"/>
         <env name="DB_CONNECTION" value="pgsql" force="true"/>
         <env name="DB_DATABASE" value="archivage_test" force="true"/>
+        <!-- Docker injecte DB_DATABASE dans $_SERVER, lu avant $_ENV par Laravel -->
+        <server name="DB_DATABASE" value="archivage_test" force="true"/>
         <env name="FILESYSTEM_DISK" value="local" force="true"/>
         <env name="QUEUE_CONNECTION" value="sync" force="true"/>
         <env name="SESSION_DRIVER" value="array" force="true"/>
